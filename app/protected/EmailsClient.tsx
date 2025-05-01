@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SafeEmailViewer from "./SafeEmailViewer";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 export function EmailsClient({ token }: { token: string }) {
-
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [messageOpen, setMessageOpen] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchEmails = async () => {
@@ -24,11 +28,39 @@ export function EmailsClient({ token }: { token: string }) {
   }, [token]);
 
   const getValueByName = (name: string, message: []) => {
-    return message.payload.headers.find(h => h.name === name)?.value;
+    return message.payload.headers.find((h: []) => h.name === name)?.value;
   }
 
   return (
     <div className="overflow-y-scroll h-screen flex-col gap-2 px-5">
+        {messages.length > 0 && messageOpen && (
+          <div className="fixed left-0 top-0 w-screen overflow-y-scroll h-screen bg-white z-20 py-5 pt-20">
+            <div className="px-96 pb-20">
+              <p className="text-center text-2xl font-bold mb-20">{getValueByName("Subject", messages[messageOpen])}</p>
+
+              <div className="flex gap-5 justify-center">
+                <div>
+                  <p>From</p>
+                  <p>{getValueByName("From", messages[messageOpen])}</p>
+                </div>
+                <div>
+                  <p>To</p>
+                  <p>{getValueByName("To", messages[messageOpen])}</p>
+                </div>
+              </div>
+            </div>
+
+            {messages[messageOpen].payload.parts ? (
+              <SafeEmailViewer encodedHtml={messages[messageOpen].payload.parts[1].body.data} />
+            ) : (
+              <SafeEmailViewer encodedHtml={messages[messageOpen].payload.body.data} />
+            )}
+            
+            <Button className="fixed bottom-3 right-6 w-16 h-16 bg-blue-200 text-black hover:bg-blue-400" onClick={() => setMessageOpen(null)}><X size={30} /></Button>
+          </div>
+        )}
+        
+
         {!loading && messages.length > 0 && messages.map((msg, i) => {
           const from = getValueByName("From", msg)
           const subject = getValueByName("Subject", msg)
@@ -73,7 +105,7 @@ export function EmailsClient({ token }: { token: string }) {
           }
 
           return (
-            <div key={i} className="py-4 border-b-muted border-b grid grid-cols-3 hover:bg-muted duration-300 cursor-pointer px-5 rounded-lg group">
+            <div key={i} className="py-4 border-b-muted border-b grid grid-cols-3 hover:bg-muted duration-300 cursor-pointer px-5 rounded-lg group z-10" onClick={() => setMessageOpen(i)}>
               <p>{sender.name}</p>
               <div className="relative w-full overflow-x-auto [mask-image:linear-gradient(to_right,black_90%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_90%,transparent)]">
                 <p className="whitespace-nowrap overflow-x-hidden">{subject}</p>
